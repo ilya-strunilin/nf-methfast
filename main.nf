@@ -36,6 +36,8 @@ process METHFAST {
 
     script:
     """
+    ml methfast/0.3.0
+    
     methfast '${methylation_bed}' '${target_bed}' -o '${sample_id}.${params.postfix}.bed'
     """
 }
