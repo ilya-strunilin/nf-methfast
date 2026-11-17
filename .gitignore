@@ -1,0 +1,20 @@
+# Nextflow
+.nextflow/
+.nextflow.log*
+work/
+
+# Nextflow reports
+report.html
+timeline.html
+trace.txt
+
+# macOS
+.DS_Store
+
+# RStudio
+.Rproj.user/
+
+#other
+methfast_nextflow/
+methfast_nextflow.zip
+
