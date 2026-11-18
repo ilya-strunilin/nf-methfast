@@ -42,6 +42,42 @@ process METHFAST {
     """
 }
 
+process MERGE_BEDS {
+    tag "${postfix}"
+
+    publishDir "${params.outdir}", mode: 'copy', overwrite: true
+
+    input:
+    path beds
+    val postfix
+
+    output:
+    path "merged.${postfix}.tsv.gz"
+
+    script:
+    """
+    set -o pipefail
+
+    {
+        printf 'chr\tstart\tend\tn_cpg\tcoverage\tbeta\tsample_id\n'
+
+        for bed in *.'${postfix}'.bed; do
+            sample_id="\${bed%.${postfix}.bed}"
+
+            awk -v sample_id="\$sample_id" '
+                BEGIN { FS = OFS = "\t" }
+                NR == 1 && (\$1 == "chr" || \$1 == "#chr") && \$2 == "start" { next }
+                NF != 6 {
+                    print "Expected 6 columns in " FILENAME " at line " FNR "; found " NF > "/dev/stderr"
+                    exit 1
+                }
+                { print \$1, \$2, \$3, \$4, \$5, \$6, sample_id }
+            ' "\$bed" || exit 1
+        done
+    } | gzip -c > merged.${postfix}.tsv.gz
+    """
+}
+
 workflow {
     def sampleRows = Channel.fromPath(samplesTsv)
         .splitCsv(header: true, sep: '\t')
@@ -64,4 +100,5 @@ workflow {
     }.unique { sample -> sample[0] }
 
     METHFAST(samples, targetBed, postfix)
+    MERGE_BEDS(METHFAST.out.map { sample_id, bed -> bed }.collect(), postfix)
 }
