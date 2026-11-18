@@ -2,7 +2,7 @@ nextflow.enable.dsl = 2
 
 // Quantify methylation in a shared set of genomic intervals, once per sample.
 
-def required = ['samples', 'target_bed', 'outdir']
+def required = ['samples', 'target_bed', 'outdir', 'postfix']
 required.each { name ->
     if (!params[name]) {
         error "Missing --${name}. See README.md for usage."
@@ -16,11 +16,10 @@ if (!(targetBed.name ==~ /.+\.bed(\.gz)?/)) {
     error "Target file must end in .bed or .bed.gz: ${targetBed}"
 }
 
-def postfix = params.postfix ?: targetBed.name.replaceFirst(/\.bed(\.gz)?$/, '')
+def postfix = params.postfix.toString()
 if (!(postfix ==~ /[A-Za-z0-9][A-Za-z0-9._-]*/)) {
     error "Unsafe postfix '${postfix}'. Use letters, digits, dots, underscores or hyphens."
 }
-params.postfix = postfix
 
 process METHFAST {
     tag "${sample_id}"
@@ -30,15 +29,16 @@ process METHFAST {
     input:
     tuple val(sample_id), path(methylation_bed)
     path target_bed
+    val postfix
 
     output:
-    tuple val(sample_id), path("${sample_id}.${params.postfix}.bed")
+    tuple val(sample_id), path("${sample_id}.${postfix}.bed")
 
     script:
     """
     ml methfast/0.3.0
     
-    methfast '${methylation_bed}' '${target_bed}' -o '${sample_id}.${params.postfix}.bed'
+    methfast '${methylation_bed}' '${target_bed}' -o '${sample_id}.${postfix}.bed'
     """
 }
 
@@ -63,5 +63,5 @@ workflow {
         tuple(id, methylationBed)
     }.unique { sample -> sample[0] }
 
-    METHFAST(samples, targetBed)
+    METHFAST(samples, targetBed, postfix)
 }
